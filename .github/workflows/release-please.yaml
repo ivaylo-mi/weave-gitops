@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    if: "${{ github.repository_owner == 'weaveworks' && github.ref_name == 'main' }}"
+    if: "${{ github.ref_name == 'main' }}"
     outputs:
       release_created: ${{ steps.release-please.outputs.release_created }}
       tag_name: ${{ steps.release-please.outputs.tag_name }}
@@ -28,7 +28,7 @@ jobs:
         id: release-please
         uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4.4.0
         with:
-          token: ${{ secrets.WEAVE_GITOPS_BOT_ACCESS_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   validate-versions:
     needs: release-please
@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: write # needed for GitHub Packages registry access
-    if: "${{ needs.release-please.outputs.release_created }}"
+    if: false
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -98,7 +98,7 @@ jobs:
       file: gitops-server.dockerfile
       flavor: |
         latest=true
-      image: ghcr.io/weaveworks/wego-app
+      image: ghcr.io/gkalian/wego-app
       platforms: linux/amd64,linux/arm64
       push: true
       tags: |
@@ -160,7 +160,7 @@ jobs:
           fi
           
           echo "Publishing chart: $CHART_FILE"
-          helm push "$CHART_FILE" oci://ghcr.io/weaveworks/charts &> helm-release/push-metadata.txt
+          helm push "$CHART_FILE" oci://ghcr.io/gkalian/charts &> helm-release/push-metadata.txt
           
           # Extract digest for signing
           CHART_DIGEST=$(awk '/Digest: /{print $2}' helm-release/push-metadata.txt)
@@ -176,11 +176,11 @@ jobs:
         
       - name: Keyless signing of chart
         run: |
-          cosign sign --yes ghcr.io/weaveworks/charts@${{ steps.publish-chart.outputs.digest }}
+          cosign sign --yes ghcr.io/gkalian/charts@${{ steps.publish-chart.outputs.digest }}
           
       - name: Verify the chart signing
         run: |
-          cosign verify ghcr.io/weaveworks/charts@${{ steps.publish-chart.outputs.digest }} \
+          cosign verify ghcr.io/gkalian/charts@${{ steps.publish-chart.outputs.digest }} \
             --certificate-identity "https://github.com/${{ github.workflow_ref }}" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" | jq .
 
@@ -211,11 +211,11 @@ jobs:
           version: latest
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.WEAVE_GITOPS_BOT_ACCESS_TOKEN }}
-          BOT_TOKEN: ${{ secrets.WEAVE_GITOPS_BOT_ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BOT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   create-release-summary:
-    needs: [release-please, validate-versions, publish-npm-package, build-and-push-image, build-and-push-chart, goreleaser]
+    needs: [release-please, validate-versions, build-and-push-image, build-and-push-chart, goreleaser]
     runs-on: ubuntu-latest
     if: "${{ needs.release-please.outputs.release_created }}"
     steps:
@@ -228,8 +228,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Components Released" >> $GITHUB_STEP_SUMMARY
           echo "- Application binaries (GoReleaser)" >> $GITHUB_STEP_SUMMARY
-          echo "- Container images (ghcr.io/weaveworks/wego-app)" >> $GITHUB_STEP_SUMMARY
-          echo "- Helm chart (ghcr.io/weaveworks/charts)" >> $GITHUB_STEP_SUMMARY
+          echo "- Container images (ghcr.io/gkalian/wego-app)" >> $GITHUB_STEP_SUMMARY
+          echo "- Helm chart (ghcr.io/gkalian/charts)" >> $GITHUB_STEP_SUMMARY
           echo "- NPM package (@weaveworks scope)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Version Synchronization" >> $GITHUB_STEP_SUMMARY

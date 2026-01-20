@@ -1,5 +1,8 @@
 # Weave GitOps
 
+> I am trying to publish new version of Weave GitOps based on the recent merges in the main branch. Idea is to create new pre-release version
+> which supports flux >v2.7.0
+
 ![Test status](https://github.com/weaveworks/weave-gitops/actions/workflows/pr.yaml/badge.svg)
 [![LICENSE](https://img.shields.io/github/license/weaveworks/weave-gitops)](https://github.com/weaveworks/weave-gitops/blob/master/LICENSE)
 [![Contributors](https://img.shields.io/github/contributors/weaveworks/weave-gitops)](https://github.com/weaveworks/weave-gitops/graphs/contributors)
@@ -70,7 +73,7 @@ Mac / Linux
 <!-- x-release-please-start-version -->
 
 ```console
-curl --silent --location "https://github.com/weaveworks/weave-gitops/releases/download/v0.39.0-rc.2/gitops-$(uname)-$(uname -m).tar.gz" | tar xz -C /tmp
+curl --silent --location "https://github.com/weaveworks/weave-gitops/releases/download/v0.39.0-rc.3/gitops-$(uname)-$(uname -m).tar.gz" | tar xz -C /tmp
 sudo mv /tmp/gitops /usr/local/bin
 gitops version
 ```

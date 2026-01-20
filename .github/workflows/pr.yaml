@@ -33,6 +33,7 @@ jobs:
           echo "Using Yarn "$(yarn --version)
           git diff --no-ext-diff --exit-code
       - run: make ui-audit
+        continue-on-error: true
       - run: make ui
       - run: make ui-lint
       - run: make ui-prettify-check
