@@ -8,7 +8,7 @@ before:
 checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
 release:
-  mode: keep-existing
+  disable: true
 archives:
   - formats: tar.gz
     name_template: >-
