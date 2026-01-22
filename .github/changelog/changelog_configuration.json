@@ -42,5 +42,8 @@
         "filter": {
             "pattern": "^v[0-9.]+$"
         }
-    }
+    },
+    "base_branches": [],
+    "enable_commits": true,
+    "commit_template": "- ${{COMMIT_SHA}} - ${{SUBJECT}}"
 }
