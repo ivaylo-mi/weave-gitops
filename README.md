@@ -72,15 +72,11 @@ Weave GitOps Open Source provides:
 
 Mac / Linux
 
-<!-- x-release-please-start-version -->
-
 ```console
 curl --silent --location "https://github.com/weaveworks/weave-gitops/releases/download/v0.39.0-rc.3/gitops-$(uname)-$(uname -m).tar.gz" | tar xz -C /tmp
 sudo mv /tmp/gitops /usr/local/bin
 gitops version
 ```
-
-<!-- x-release-please-end -->
 
 Alternatively, users can use Homebrew:
 
