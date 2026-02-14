@@ -21,10 +21,10 @@ func TestDelegatingCacheGet(t *testing.T) {
 	cache, err := cache.New(k8sEnv.Rest, cache.Options{})
 	g.Expect(err).To(BeNil())
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
 	defer cancel()
 
-	go cache.Start(ctx) //nolint:errcheck
+	go cache.Start(ctx)
 
 	if ok := cache.WaitForCacheSync(ctx); !ok {
 		g.Fail("failed syncing client cache")
@@ -56,10 +56,10 @@ func TestDelegatingCacheList(t *testing.T) {
 	cache, err := cache.New(k8sEnv.Rest, cache.Options{})
 	g.Expect(err).To(BeNil())
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
 	defer cancel()
 
-	go cache.Start(ctx) //nolint:errcheck
+	go cache.Start(ctx)
 
 	if ok := cache.WaitForCacheSync(ctx); !ok {
 		g.Fail("failed syncing client cache")

@@ -1,22 +1,22 @@
 package server
 
 import (
-	"context"
 	"testing"
 
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/weave-gitops/pkg/kube"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/weaveworks/weave-gitops/pkg/kube"
 )
 
 func TestGetFluxLikeInventory(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ks := &kustomizev1.Kustomization{
 		ObjectMeta: metav1.ObjectMeta{
@@ -240,9 +240,8 @@ func TestSanitizeUnstructuredSecret(t *testing.T) {
 			"apiVersion": "v1",
 			"kind":       "Secret",
 			"metadata": map[string]interface{}{
-				"name":              "my-secret",
-				"namespace":         "my-namespace",
-				"creationTimestamp": nil,
+				"name":      "my-secret",
+				"namespace": "my-namespace",
 			},
 			"type": "Opaque",
 			"data": map[string]interface{}{

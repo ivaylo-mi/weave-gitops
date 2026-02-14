@@ -1,21 +1,22 @@
 package server_test
 
 import (
-	"context"
 	"testing"
 
 	. "github.com/onsi/gomega"
-	pacv2beta2 "github.com/weaveworks/policy-agent/api/v2beta2"
-	pb "github.com/weaveworks/weave-gitops/pkg/api/core"
-	"github.com/weaveworks/weave-gitops/pkg/kube"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	pacv2beta2 "github.com/weaveworks/policy-agent/api/v2beta2"
+
+	pb "github.com/weaveworks/weave-gitops/pkg/api/core"
+	"github.com/weaveworks/weave-gitops/pkg/kube"
 )
 
 func TestListPolicies(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).To(BeNil())
@@ -53,8 +54,8 @@ func TestListPolicies(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(policy1, policy2).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.ListPolicies(ctx, &pb.ListPoliciesRequest{})
 
@@ -70,7 +71,7 @@ func TestListPolicies(t *testing.T) {
 func TestGetPolicy(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).To(BeNil())
@@ -92,8 +93,8 @@ func TestGetPolicy(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(policy).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.GetPolicy(ctx, &pb.GetPolicyRequest{
 		PolicyName: policy.Spec.ID,

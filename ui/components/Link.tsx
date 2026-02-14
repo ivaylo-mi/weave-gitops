@@ -1,16 +1,17 @@
 import * as React from "react";
-import { Link as RouterLink } from "react-router-dom";
+import type { JSX } from "react";
+import { Link as RouterLink } from "react-router";
 import styled from "styled-components";
-import { isAllowedLink } from "../lib/utils";
+import { isAllowedLink, isHTTP } from "../lib/utils";
 import Spacer from "./Spacer";
 import Text, { TextProps } from "./Text";
 
 type Props = {
   className?: string;
   to?: string;
-  innerRef?: any;
   children?: any;
   href?: any;
+  target?: any;
   newTab?: boolean;
   textProps?: TextProps;
   icon?: JSX.Element;
@@ -26,19 +27,22 @@ const SpacedIcon = ({ icon }: { icon: JSX.Element }) => (
   </>
 );
 
-function Link({
-  children,
-  href,
-  className,
-  to = "",
-  newTab,
-  onClick,
-  textProps,
-  icon,
-  onMouseEnter,
-  onMouseLeave,
-  ...props
-}: Props) {
+const Link = React.forwardRef<HTMLAnchorElement, Props>(function Link(
+  {
+    children,
+    href,
+    className,
+    to = "",
+    newTab,
+    onClick,
+    textProps,
+    icon,
+    onMouseEnter,
+    onMouseLeave,
+    ...props
+  },
+  ref
+) {
   if ((href && !isAllowedLink(href)) || (!href && !to)) {
     return (
       <Text className={className} {...textProps}>
@@ -56,6 +60,7 @@ function Link({
   if (href) {
     return (
       <a
+        ref={ref}
         className={className}
         href={href}
         target={newTab ? "_blank" : ""}
@@ -69,21 +74,29 @@ function Link({
     );
   }
 
+  if (isHTTP(to) || !isAllowedLink(to)) {
+    to = new URL("", window.origin + window.location.pathname + to).toString();
+  }
+
   return (
     <RouterLink
+      ref={ref}
       onClick={onClick}
       className={className}
       to={to}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      relative="path"
       {...props}
     >
       {icon && <SpacedIcon icon={icon} />}
       {txt}
     </RouterLink>
   );
-}
+});
 
-export default styled(Link).attrs({ className: Link.name })`
+Link.displayName = "Link";
+
+export default styled(Link).attrs({ className: Link.displayName })`
   text-decoration: none;
 `;

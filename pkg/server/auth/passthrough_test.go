@@ -1,7 +1,6 @@
 package auth_test
 
 import (
-	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+
 	"github.com/weaveworks/weave-gitops/pkg/server/auth"
 	"github.com/weaveworks/weave-gitops/pkg/testutils"
 )
@@ -29,7 +29,7 @@ func TestPassthroughPrincipalGetter(t *testing.T) {
 	}
 
 	srv := testutils.MakeKeysetServer(t, privKey)
-	keySet := oidc.NewRemoteKeySet(oidc.ClientContext(context.TODO(), srv.Client()), srv.URL)
+	keySet := oidc.NewRemoteKeySet(oidc.ClientContext(t.Context(), srv.Client()), srv.URL)
 	verifier := oidc.NewVerifier("http://127.0.0.1:5556/dex", keySet, &oidc.Config{ClientID: "test-service"})
 
 	for _, tt := range authTests {

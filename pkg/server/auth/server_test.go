@@ -2,7 +2,6 @@ package auth_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -19,13 +18,14 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/oauth2-proxy/mockoidc"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/weave-gitops/pkg/featureflags"
-	"github.com/weaveworks/weave-gitops/pkg/server/auth"
 	"golang.org/x/crypto/bcrypt"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlclientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/weaveworks/weave-gitops/pkg/featureflags"
+	"github.com/weaveworks/weave-gitops/pkg/server/auth"
 )
 
 // A custom client that doesn't automatically follow redirects
@@ -67,7 +67,7 @@ func TestCallbackErrorFromOIDC(t *testing.T) {
 	s, _ := makeAuthServer(t, nil, nil, []auth.AuthMethod{auth.OIDC}, sm)
 
 	req := httptest.NewRequest(http.MethodGet, "https://example.com/callback?error=invalid_request&error_description=Unsupported%20response_type%20value", nil).
-		WithContext(contextWithValues(context.Background(), map[string]any{}))
+		WithContext(contextWithValues(t.Context(), map[string]any{}))
 	w := httptest.NewRecorder()
 	s.Callback(w, req)
 
@@ -163,7 +163,7 @@ func TestCallbackCodeExchangeError(t *testing.T) {
 	encState := base64.StdEncoding.EncodeToString(state)
 
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("https://example.com/callback?code=123&state=%s", encState), nil).
-		WithContext(contextWithValues(context.Background(), map[string]any{
+		WithContext(contextWithValues(t.Context(), map[string]any{
 			auth.StateCookieName: encState,
 		}))
 
@@ -232,8 +232,7 @@ func TestSignInNoSecret(t *testing.T) {
 
 	s, _ := makeAuthServer(t, ctrlclientfake.NewClientBuilder().Build(), tokenSignerVerifier, []auth.AuthMethod{auth.OIDC}, &fakeSessionManager{})
 
-	j, err := json.Marshal(auth.LoginRequest{})
-	g.Expect(err).NotTo(HaveOccurred())
+	j, _ := json.Marshal(auth.LoginRequest{})
 
 	reader := bytes.NewReader(j)
 
@@ -276,8 +275,7 @@ func TestSignInWrongUsernameReturnsUnauthorized(t *testing.T) {
 		Password: "my-secret-password",
 	}
 
-	j, err := json.Marshal(login)
-	g.Expect(err).NotTo(HaveOccurred())
+	j, _ := json.Marshal(login)
 
 	reader := bytes.NewReader(j)
 
@@ -317,8 +315,7 @@ func TestSignInWrongPasswordReturnsUnauthorized(t *testing.T) {
 		Password: "wrong",
 	}
 
-	j, err := json.Marshal(login)
-	g.Expect(err).NotTo(HaveOccurred())
+	j, _ := json.Marshal(login)
 
 	reader := bytes.NewReader(j)
 
@@ -357,8 +354,7 @@ func TestSignInCorrectPassword(t *testing.T) {
 		Password: password,
 	}
 
-	j, err := json.Marshal(login)
-	g.Expect(err).NotTo(HaveOccurred())
+	j, _ := json.Marshal(login)
 
 	reader := bytes.NewReader(j)
 
@@ -420,7 +416,7 @@ func TestUserInfoAnonymous(t *testing.T) {
 	authCfg, err := auth.NewAuthServerConfig(logr.Discard(), auth.OIDCConfig{}, nil, nil, testNamespace, authMethods, "test-user", nil)
 	g.Expect(err).NotTo(HaveOccurred())
 
-	s, err := auth.NewAuthServer(context.Background(), authCfg)
+	s, err := auth.NewAuthServer(t.Context(), authCfg)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	req := httptest.NewRequest(http.MethodGet, "/foo", nil)
@@ -555,6 +551,7 @@ func TestUserInfoAdminFlowBadCookie(t *testing.T) {
 }
 
 func getVerifyTokens(t *testing.T, m *mockoidc.MockOIDC) map[string]interface{} {
+	t.Helper()
 	const (
 		state = "abcdef"
 		nonce = "ghijkl"
@@ -628,11 +625,11 @@ func TestUserInfoOIDCFlow(t *testing.T) {
 
 	tokens := getVerifyTokens(t, m)
 
-	_, err = m.Keypair.VerifyJWT(tokens["access_token"].(string))
+	_, err = m.Keypair.VerifyJWT(tokens["access_token"].(string), nil)
 	g.Expect(err).NotTo(HaveOccurred())
-	_, err = m.Keypair.VerifyJWT(tokens["refresh_token"].(string))
+	_, err = m.Keypair.VerifyJWT(tokens["refresh_token"].(string), nil)
 	g.Expect(err).NotTo(HaveOccurred())
-	idToken, err := m.Keypair.VerifyJWT(tokens["id_token"].(string))
+	idToken, err := m.Keypair.VerifyJWT(tokens["id_token"].(string), nil)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	req := httptest.NewRequest(http.MethodGet, "https://example.com/userinfo", nil).WithContext(
@@ -711,7 +708,7 @@ func TestUserInfoOIDCFlow_with_custom_claims(t *testing.T) {
 	tokens := make(map[string]interface{})
 	g.Expect(json.Unmarshal(body, &tokens)).To(Succeed())
 
-	idToken, err := m.Keypair.VerifyJWT(tokens["id_token"].(string))
+	idToken, err := m.Keypair.VerifyJWT(tokens["id_token"].(string), nil)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	req := httptest.NewRequest(http.MethodGet, "https://example.com/userinfo", nil).WithContext(
@@ -770,11 +767,11 @@ func TestRefresh(t *testing.T) {
 	g.Expect(sm.PutValues).To(HaveKey(auth.RefreshTokenCookieName))
 
 	// And they should all be valid!
-	_, err = m.Keypair.VerifyJWT(sm.stringValue(auth.IDTokenCookieName))
+	_, err = m.Keypair.VerifyJWT(sm.stringValue(auth.IDTokenCookieName), nil)
 	g.Expect(err).NotTo(HaveOccurred())
-	_, err = m.Keypair.VerifyJWT(sm.stringValue(auth.AccessTokenCookieName))
+	_, err = m.Keypair.VerifyJWT(sm.stringValue(auth.AccessTokenCookieName), nil)
 	g.Expect(err).NotTo(HaveOccurred())
-	_, err = m.Keypair.VerifyJWT(sm.stringValue(auth.RefreshTokenCookieName))
+	_, err = m.Keypair.VerifyJWT(sm.stringValue(auth.RefreshTokenCookieName), nil)
 	g.Expect(err).NotTo(HaveOccurred())
 }
 
@@ -870,7 +867,7 @@ func TestLogoutSuccess(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	req := httptest.NewRequest(http.MethodPost, "https://example.com/logout", nil).WithContext(
-		contextWithValues(context.Background(), map[string]any{
+		contextWithValues(t.Context(), map[string]any{
 			"sessionid": "test-session",
 		}))
 
@@ -940,7 +937,7 @@ func makeAuthServer(t *testing.T, client ctrlclient.Client, tsv auth.TokenSigner
 	authCfg, err := auth.NewAuthServerConfig(logr.Discard(), oidcCfg, client, tsv, testNamespace, authMethodsMap, "", sm)
 	g.Expect(err).NotTo(HaveOccurred())
 
-	s, err := auth.NewAuthServer(context.Background(), authCfg)
+	s, err := auth.NewAuthServer(t.Context(), authCfg)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	return s, m
@@ -958,7 +955,7 @@ func TestAuthMethods(t *testing.T) {
 	authCfg, err := auth.NewAuthServerConfig(logr.Discard(), auth.OIDCConfig{}, ctrlclientfake.NewClientBuilder().Build(), nil, testNamespace, authMethods, "", scs.New())
 	g.Expect(err).NotTo(HaveOccurred())
 
-	_, err = auth.NewAuthServer(context.Background(), authCfg)
+	_, err = auth.NewAuthServer(t.Context(), authCfg)
 	g.Expect(err).To(MatchError(MatchRegexp("OIDC auth, local auth or anonymous mode must be enabled")))
 
 	g.Expect(featureflags.Get("OIDC_AUTH")).To(Equal(""))
@@ -980,7 +977,7 @@ func TestAuthMethods(t *testing.T) {
 
 	authCfg, err = auth.NewAuthServerConfig(logr.Discard(), auth.OIDCConfig{}, fakeKubernetesClient, nil, testNamespace, authMethods, "", scs.New())
 	g.Expect(err).NotTo(HaveOccurred())
-	_, err = auth.NewAuthServer(context.Background(), authCfg)
+	_, err = auth.NewAuthServer(t.Context(), authCfg)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	g.Expect(featureflags.Get("OIDC_AUTH")).To(Equal(""))
@@ -1003,7 +1000,7 @@ func TestAuthMethods(t *testing.T) {
 
 	authCfg, err = auth.NewAuthServerConfig(logr.Discard(), oidcCfg, ctrlclientfake.NewClientBuilder().Build(), nil, testNamespace, authMethods, "", scs.New())
 	g.Expect(err).NotTo(HaveOccurred())
-	_, err = auth.NewAuthServer(context.Background(), authCfg)
+	_, err = auth.NewAuthServer(t.Context(), authCfg)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	g.Expect(featureflags.Get("OIDC_AUTH")).To(Equal("true"))

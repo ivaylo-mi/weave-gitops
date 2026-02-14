@@ -1,34 +1,34 @@
 package server_test
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"testing"
 
-	helmv2 "github.com/fluxcd/helm-controller/api/v2beta2"
+	helmv2 "github.com/fluxcd/helm-controller/api/v2"
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1"
 	"github.com/fluxcd/pkg/apis/meta"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/weave-gitops/core/clustersmngr/cluster"
-	"github.com/weaveworks/weave-gitops/core/server"
-	"github.com/weaveworks/weave-gitops/core/server/types"
-	pb "github.com/weaveworks/weave-gitops/pkg/api/core"
-	"github.com/weaveworks/weave-gitops/pkg/kube"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta/testrestmapper"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/weaveworks/weave-gitops/core/clustersmngr/cluster"
+	"github.com/weaveworks/weave-gitops/core/server"
+	"github.com/weaveworks/weave-gitops/core/server/types"
+	pb "github.com/weaveworks/weave-gitops/pkg/api/core"
+	"github.com/weaveworks/weave-gitops/pkg/kube"
 )
 
 func TestGetInventoryKustomization(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	automationName := "my-automation"
 
@@ -123,8 +123,8 @@ func TestGetInventoryKustomization(t *testing.T) {
 	g.Expect(err).To(BeNil())
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(&ns, &anotherNs, kust, deployment, rs).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.GetInventory(ctx, &pb.GetInventoryRequest{
 		Namespace:    ns.Name,
@@ -144,7 +144,7 @@ func TestGetInventoryKustomization(t *testing.T) {
 func TestGetBlankInventoryKustomization(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	automationName := "my-automation"
 	ns := "test-namespace"
@@ -194,8 +194,8 @@ func TestGetBlankInventoryKustomization(t *testing.T) {
 	g.Expect(err).To(BeNil())
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(kust, deployment).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.GetInventory(ctx, &pb.GetInventoryRequest{
 		Namespace:    ns,
@@ -215,7 +215,7 @@ func TestGetInventoryHelmRelease(t *testing.T) {
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).NotTo(HaveOccurred())
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -229,7 +229,11 @@ func TestGetInventoryHelmRelease(t *testing.T) {
 		},
 		Spec: helmv2.HelmReleaseSpec{},
 		Status: helmv2.HelmReleaseStatus{
-			LastReleaseRevision: 1,
+			History: helmv2.Snapshots{{
+				Name:      "first-helm-name",
+				Version:   1,
+				Namespace: ns.Name,
+			}},
 		},
 	}
 
@@ -269,8 +273,8 @@ func TestGetInventoryHelmRelease(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, helm1, secret, cm).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.GetInventory(ctx, &pb.GetInventoryRequest{
 		Namespace:    ns.Name,
@@ -290,7 +294,7 @@ func TestGetInventoryHelmReleaseNoNSResources(t *testing.T) {
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).NotTo(HaveOccurred())
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -306,8 +310,7 @@ func TestGetInventoryHelmReleaseNoNSResources(t *testing.T) {
 			TargetNamespace: "test-ns",
 		},
 		Status: helmv2.HelmReleaseStatus{
-			StorageNamespace:    ns.Name,
-			LastReleaseRevision: 0,
+			StorageNamespace: ns.Name,
 			History: helmv2.Snapshots{
 				{
 					Name:      "first-helm-name",
@@ -359,8 +362,8 @@ func TestGetInventoryHelmReleaseNoNSResources(t *testing.T) {
 	client := fake.NewClientBuilder().WithScheme(scheme).
 		WithRESTMapper(testrestmapper.TestOnlyStaticRESTMapper(scheme)).
 		WithRuntimeObjects(ns, helm1, secret, cm).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.GetInventory(ctx, &pb.GetInventoryRequest{
 		Namespace:    ns.Name,
@@ -380,7 +383,7 @@ func TestGetInventoryHelmReleaseWithKubeconfig(t *testing.T) {
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).NotTo(HaveOccurred())
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -394,19 +397,23 @@ func TestGetInventoryHelmReleaseWithKubeconfig(t *testing.T) {
 		},
 		Spec: helmv2.HelmReleaseSpec{
 			KubeConfig: &meta.KubeConfigReference{
-				SecretRef: meta.SecretKeyReference{
+				SecretRef: &meta.SecretKeyReference{
 					Name: "kubeconfig",
 				},
 			},
 		},
 		Status: helmv2.HelmReleaseStatus{
-			LastReleaseRevision: 1,
+			History: helmv2.Snapshots{{
+				Name:      "first-helm-name",
+				Version:   1,
+				Namespace: ns.Name,
+			}},
 		},
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, helm1).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.GetInventory(ctx, &pb.GetInventoryRequest{
 		Namespace:    ns.Name,

@@ -1,7 +1,6 @@
 package auth_test
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -17,6 +16,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
+
 	"github.com/weaveworks/weave-gitops/pkg/server/auth"
 	"github.com/weaveworks/weave-gitops/pkg/testutils"
 )
@@ -48,7 +48,7 @@ func TestJWTCookiePrincipalGetter(t *testing.T) {
 	}
 
 	srv := testutils.MakeKeysetServer(t, privKey)
-	keySet := oidc.NewRemoteKeySet(oidc.ClientContext(context.TODO(), srv.Client()), srv.URL)
+	keySet := oidc.NewRemoteKeySet(oidc.ClientContext(t.Context(), srv.Client()), srv.URL)
 	verifier := oidc.NewVerifier("http://127.0.0.1:5556/dex", keySet, &oidc.Config{ClientID: "test-service"})
 
 	for _, tt := range authTests {
@@ -100,7 +100,7 @@ func TestJWTAuthorizationHeaderPrincipalGetter(t *testing.T) {
 	}
 
 	srv := testutils.MakeKeysetServer(t, privKey)
-	keySet := oidc.NewRemoteKeySet(oidc.ClientContext(context.TODO(), srv.Client()), srv.URL)
+	keySet := oidc.NewRemoteKeySet(oidc.ClientContext(t.Context(), srv.Client()), srv.URL)
 	verifier := oidc.NewVerifier("http://127.0.0.1:5556/dex", keySet, &oidc.Config{ClientID: "test-service"})
 
 	for _, tt := range authTests {
@@ -255,6 +255,7 @@ type testServer struct {
 }
 
 func newTestServer(t *testing.T, handler http.Handler) *testServer {
+	t.Helper()
 	ts := httptest.NewTLSServer(handler)
 
 	jar, err := cookiejar.New(nil)
@@ -271,6 +272,7 @@ func newTestServer(t *testing.T, handler http.Handler) *testServer {
 }
 
 func (ts *testServer) execute(t *testing.T, urlPath string, cookie *http.Cookie) (http.Header, string) {
+	t.Helper()
 	req, err := http.NewRequest(http.MethodGet, ts.URL+urlPath, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -294,6 +296,7 @@ func (ts *testServer) execute(t *testing.T, urlPath string, cookie *http.Cookie)
 }
 
 func newTestJWTMux(t *testing.T, cookieName string, sessionManager auth.SessionManager, principalGetter auth.PrincipalGetter) *http.ServeMux {
+	t.Helper()
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/put", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -331,6 +334,7 @@ func newTestJWTMux(t *testing.T, cookieName string, sessionManager auth.SessionM
 }
 
 func newTestJWTServerServer(t *testing.T, cookieName string, sessionManager auth.SessionManager, principalGetter auth.PrincipalGetter) *testServer {
+	t.Helper()
 	mux := newTestJWTMux(t, cookieName, sessionManager, principalGetter)
 
 	ts := newTestServer(t, sessionManager.LoadAndSave(mux))

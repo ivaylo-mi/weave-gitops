@@ -1,14 +1,22 @@
-import { render, screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/dom";
+import { render } from "@testing-library/react";
 import "jest-canvas-mock";
 import "jest-styled-components";
-import React from "react";
-import { act } from "react-dom/test-utils";
+import React, { act } from "react";
 import {
   createCoreMockClient,
   withContext,
   withTheme,
 } from "../../lib/test-utils";
 import Footer from "../Footer";
+
+jest.mock(
+  "../../../package.json",
+  () => ({
+    version: "x.y.z",
+  }),
+  { virtual: true },
+);
 
 describe("Footer", () => {
   let container;
@@ -34,12 +42,13 @@ describe("Footer", () => {
                   commit: "123abcd",
                 }),
               }),
-            })
+            }),
           ),
-          container
+          container,
         );
       });
 
+      await waitFor(() => expect(screen.getByText("Weave GitOps:")));
       const footer = screen.getByRole("footer");
       expect(footer).toMatchSnapshot();
     });
@@ -51,12 +60,13 @@ describe("Footer", () => {
               api: createCoreMockClient({
                 GetVersion: () => ({}),
               }),
-            })
+            }),
           ),
-          container
+          container,
         );
       });
 
+      await waitFor(() => expect(screen.getByText("Weave GitOps:")));
       const footer = screen.getByRole("footer");
       expect(footer).toMatchSnapshot();
     });

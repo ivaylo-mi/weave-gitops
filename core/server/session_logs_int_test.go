@@ -1,23 +1,21 @@
 package server
 
 import (
-	"context"
 	"log"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/johannesboyne/gofakes3"
+	"github.com/johannesboyne/gofakes3/backend/s3mem"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"net/http/httptest"
-
-	"github.com/johannesboyne/gofakes3"
-	"github.com/johannesboyne/gofakes3/backend/s3mem"
-	. "github.com/onsi/gomega"
 	"github.com/weaveworks/weave-gitops/pkg/kube"
 	logger2 "github.com/weaveworks/weave-gitops/pkg/logger"
 	"github.com/weaveworks/weave-gitops/pkg/run/constants"
@@ -70,7 +68,7 @@ func TestGetSessionLogsIntegration(t *testing.T) {
 	)
 	g.Expect(err).ShouldNot(HaveOccurred())
 
-	logEntries, next, err := getGitOpsRunLogs(context.Background(),
+	logEntries, next, err := getGitOpsRunLogs(t.Context(),
 		"session-id",
 		"",
 		asS3Reader(minioClient),
@@ -104,7 +102,7 @@ func TestGetSessionLogsIntegration(t *testing.T) {
 	s3logger.Actionf("round 2 - test action")
 	s3logger.Failuref("round 2 - test failure")
 
-	logEntries, _, err = getGitOpsRunLogs(context.Background(),
+	logEntries, _, err = getGitOpsRunLogs(t.Context(),
 		"session-id",
 		next,
 		asS3Reader(minioClient),
@@ -141,7 +139,7 @@ func TestIsSecretCreatedSecretFound(t *testing.T) {
 
 	cli := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(secret).Build()
 
-	err = isSecretCreated(context.Background(), cli, constants.GitOpsRunNamespace, constants.RunDevBucketCredentials)
+	err = isSecretCreated(t.Context(), cli, constants.GitOpsRunNamespace, constants.RunDevBucketCredentials)
 
 	g.Expect(err).ShouldNot(HaveOccurred())
 }
@@ -164,7 +162,7 @@ func TestIsSecretCreatedSecretNotFound(t *testing.T) {
 
 	cli := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(secret).Build()
 
-	err = isSecretCreated(context.Background(), cli, constants.GitOpsRunNamespace, constants.RunDevBucketCredentials)
+	err = isSecretCreated(t.Context(), cli, constants.GitOpsRunNamespace, constants.RunDevBucketCredentials)
 
 	g.Expect(err).Should(HaveOccurred())
 }

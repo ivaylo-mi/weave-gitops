@@ -1,0 +1,25 @@
+name: Trigger Enterprise Workflow on Release or Merge
+
+on:
+  release:
+    types:
+      - created
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: none
+
+jobs:
+  trigger-enterprise-workflow:
+    runs-on: ubuntu-latest
+    if: "${{ github.repository_owner == 'weaveworks' && github.ref_name == 'main'}}"
+    steps:
+      - name: Trigger Workflow
+        uses: peter-evans/repository-dispatch@5fc4efd1a4797ddb68ffd0714a238564e4cc0e6f # v4.0.0
+        with:
+          token: ${{ secrets.WKS_CI_TEST_BOT_PR_TOKEN }}
+          repository: weaveworks/weave-gitops-enterprise
+          event-type: create-pr
+

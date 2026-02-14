@@ -1,13 +1,13 @@
 package auth
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/weaveworks/weave-gitops/pkg/gitproviders"
-
-	"github.com/golang-jwt/jwt/v4"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
@@ -56,7 +56,7 @@ func (i *internalJWTClient) GenerateJWT(expirationTime time.Duration, providerNa
 		// It is possible for the GitLab backend to specify an `expires_in` of 0.
 		// Edit the `Expire access tokens` setting to enable/disable expiring tokens.
 		// Gitlab defaults to 2 hour expiration, so replicate it here I guess?
-		claims.RegisteredClaims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(2 * time.Hour))
+		claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(2 * time.Hour))
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
@@ -78,9 +78,8 @@ func (i *internalJWTClient) VerifyJWT(accessToken string) (*Claims, error) {
 			return []byte(i.secretKey), nil
 		},
 	)
-
 	if err != nil {
-		return nil, errors.WithMessage(ErrUnauthorizedToken, err.Error())
+		return nil, fmt.Errorf("%w: %w", ErrUnauthorizedToken, err)
 	}
 
 	claims, ok := token.Claims.(*Claims)

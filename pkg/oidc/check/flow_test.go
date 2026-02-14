@@ -1,15 +1,14 @@
 package check_test
 
 import (
-	"context"
 	"fmt"
-	"net"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +20,7 @@ import (
 )
 
 type TestProvider struct {
-	srv             *http.Server
+	srv             *httptest.Server
 	URL             string
 	RequestedScopes []string
 	GenClaims       func() jwt.Claims
@@ -38,16 +37,7 @@ func (tp TestProvider) genToken() string {
 }
 
 func (tp *TestProvider) Start() error {
-	listener, err := net.Listen("tcp", ":8765")
-	if err != nil {
-		return fmt.Errorf("failed starting listener: %w", err)
-	}
-
-	tp.URL = fmt.Sprintf("http://%s", listener.Addr().String())
-	mux := http.ServeMux{}
-	tp.srv = &http.Server{
-		Handler: &mux,
-	}
+	mux := &http.ServeMux{}
 
 	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("content-type", "application/json")
@@ -71,13 +61,14 @@ func (tp *TestProvider) Start() error {
 }`, tp.genToken())
 	})
 
-	go tp.srv.Serve(listener)
+	tp.srv = httptest.NewServer(mux)
+	tp.URL = tp.srv.URL
 
 	return nil
 }
 
 func (tp TestProvider) Shutdown() {
-	tp.srv.Shutdown(context.Background())
+	tp.srv.Close()
 }
 
 func (tp TestProvider) IssuerURL() string {
@@ -156,11 +147,11 @@ func TestGetClaimsWithSecret(t *testing.T) {
 			var logBuf strings.Builder
 			log := logger.NewCLILogger(&logBuf)
 
-			_, err := check.GetPrincipal(context.Background(), check.Options{
+			_, err := check.GetPrincipal(t.Context(), check.Options{
 				SecretName:      "test-oidc",
 				SecretNamespace: "flux-system",
 				OpenURL: func(u string) error {
-					http.Get(u)
+					http.Get(u) // #nosec: G107
 					return nil
 				},
 				InsecureSkipSignatureCheck: true,
@@ -311,7 +302,7 @@ func TestGetClaimsWithoutSecret(t *testing.T) {
 
 			if tt.opts.OpenURL == nil {
 				tt.opts.OpenURL = func(u string) error {
-					http.Get(u)
+					http.Get(u) // #nosec: G107
 					return nil
 				}
 			}
@@ -326,7 +317,7 @@ func TestGetClaimsWithoutSecret(t *testing.T) {
 			var logBuf strings.Builder
 			log := logger.NewCLILogger(&logBuf)
 
-			c, err := check.GetPrincipal(context.Background(), tt.opts, log, nil)
+			c, err := check.GetPrincipal(t.Context(), tt.opts, log, nil)
 
 			if tt.expectedErr != "" {
 				g.Expect(err).To(MatchError(ContainSubstring(tt.expectedErr)))

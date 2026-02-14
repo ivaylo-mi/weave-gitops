@@ -3,32 +3,30 @@ package server_test
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"testing"
 
-	sourcev1b2 "github.com/fluxcd/source-controller/api/v1beta2"
-
-	helmv2 "github.com/fluxcd/helm-controller/api/v2beta2"
+	helmv2 "github.com/fluxcd/helm-controller/api/v2"
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/weave-gitops/core/server/types"
-	pb "github.com/weaveworks/weave-gitops/pkg/api/core"
-	"github.com/weaveworks/weave-gitops/pkg/kube"
-	"github.com/weaveworks/weave-gitops/pkg/run/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/weaveworks/weave-gitops/core/server/types"
+	pb "github.com/weaveworks/weave-gitops/pkg/api/core"
+	"github.com/weaveworks/weave-gitops/pkg/kube"
+	"github.com/weaveworks/weave-gitops/pkg/run/constants"
 )
 
 func TestGetObject(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).To(BeNil())
@@ -54,8 +52,8 @@ func TestGetObject(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, kust).Build()
 
-	cfg := makeServerConfig(fakeClient, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, fakeClient, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.GetObject(ctx, &pb.GetObjectRequest{
 		Name:        appName,
@@ -103,7 +101,7 @@ func TestGetObject(t *testing.T) {
 func TestGetObjectOtherKinds(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -118,9 +116,9 @@ func TestGetObjectOtherKinds(t *testing.T) {
 	g.Expect(err).To(BeNil())
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(&ns, dep).Build()
-	cfg := makeServerConfig(client, t, "")
+	cfg := makeServerConfig(t, client, "")
 
-	c := makeServer(cfg, t)
+	c := makeServer(ctx, t, cfg)
 
 	_, err = c.GetObject(ctx, &pb.GetObjectRequest{
 		Name:        appName,
@@ -137,7 +135,7 @@ func TestGetObjectOtherKinds(t *testing.T) {
 	})
 	g.Expect(err).NotTo(HaveOccurred())
 
-	c = makeServer(cfg, t)
+	c = makeServer(ctx, t, cfg)
 
 	res, err := c.GetObject(ctx, &pb.GetObjectRequest{
 		Name:        appName,
@@ -156,7 +154,7 @@ func TestGetObject_HelmReleaseWithInventory(t *testing.T) {
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).NotTo(HaveOccurred())
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -170,7 +168,11 @@ func TestGetObject_HelmReleaseWithInventory(t *testing.T) {
 		},
 		Spec: helmv2.HelmReleaseSpec{},
 		Status: helmv2.HelmReleaseStatus{
-			LastReleaseRevision: 1,
+			History: helmv2.Snapshots{{
+				Name:      "first-helm-name",
+				Version:   1,
+				Namespace: ns.Name,
+			}},
 		},
 	}
 	// Create helm storage.
@@ -192,8 +194,8 @@ func TestGetObject_HelmReleaseWithInventory(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, helm1, secret).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.GetObject(ctx, &pb.GetObjectRequest{
 		Name:        helm1.Name,
@@ -235,7 +237,7 @@ func TestGetObject_HelmReleaseWithCompressedInventory(t *testing.T) {
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).NotTo(HaveOccurred())
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -249,7 +251,11 @@ func TestGetObject_HelmReleaseWithCompressedInventory(t *testing.T) {
 		},
 		Spec: helmv2.HelmReleaseSpec{},
 		Status: helmv2.HelmReleaseStatus{
-			LastReleaseRevision: 1,
+			History: helmv2.Snapshots{{
+				Name:      "first-helm-name",
+				Version:   1,
+				Namespace: ns.Name,
+			}},
 		},
 	}
 	// Create helm storage.
@@ -277,8 +283,8 @@ func TestGetObject_HelmReleaseWithCompressedInventory(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, helm1, secret).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.GetObject(ctx, &pb.GetObjectRequest{
 		Name:        helm1.Name,
@@ -297,7 +303,7 @@ func TestGetObject_HelmReleaseCantGetSecret(t *testing.T) {
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).NotTo(HaveOccurred())
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -311,7 +317,11 @@ func TestGetObject_HelmReleaseCantGetSecret(t *testing.T) {
 		},
 		Spec: helmv2.HelmReleaseSpec{},
 		Status: helmv2.HelmReleaseStatus{
-			LastReleaseRevision: 1,
+			History: helmv2.Snapshots{{
+				Name:      "first-helm-name",
+				Version:   1,
+				Namespace: ns.Name,
+			}},
 		},
 	}
 	secret := &corev1.Secret{
@@ -324,8 +334,8 @@ func TestGetObject_HelmReleaseCantGetSecret(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, helm1, secret).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.GetObject(ctx, &pb.GetObjectRequest{
 		Name:        helm1.Name,
@@ -354,15 +364,15 @@ func TestGetObjectSecret(t *testing.T) {
 			"key": []byte("value"),
 		},
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).To(BeNil())
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, secret).Build()
 
-	cfg := makeServerConfig(fakeClient, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, fakeClient, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.GetObject(ctx, &pb.GetObjectRequest{
 		Name:        secret.Name,
@@ -384,7 +394,7 @@ func TestGetObjectSecret(t *testing.T) {
 func TestListObjectSingle(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).To(BeNil())
@@ -407,8 +417,8 @@ func TestListObjectSingle(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, kust).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.ListObjects(ctx, &pb.ListObjectsRequest{
 		Namespace: ns.Name,
@@ -426,7 +436,7 @@ func TestListObjectSingle(t *testing.T) {
 func TestListObjectMultiple(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).To(BeNil())
@@ -459,8 +469,8 @@ func TestListObjectMultiple(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, kust, helm1, helm2).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.ListObjects(ctx, &pb.ListObjectsRequest{
 		Namespace: ns.Name,
@@ -477,7 +487,7 @@ func TestListObjectMultiple(t *testing.T) {
 func TestListObjectSingleWithClusterName(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).To(BeNil())
@@ -500,8 +510,8 @@ func TestListObjectSingleWithClusterName(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, kust).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.ListObjects(ctx, &pb.ListObjectsRequest{
 		Namespace:   ns.Name,
@@ -520,7 +530,7 @@ func TestListObjectSingleWithClusterName(t *testing.T) {
 func TestListObjectMultipleWithClusterName(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).To(BeNil())
@@ -553,8 +563,8 @@ func TestListObjectMultipleWithClusterName(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, kust, helm1, helm2).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.ListObjects(ctx, &pb.ListObjectsRequest{
 		Namespace:   ns.Name,
@@ -575,7 +585,7 @@ func TestListObject_HelmReleaseWithInventory(t *testing.T) {
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).NotTo(HaveOccurred())
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -589,7 +599,11 @@ func TestListObject_HelmReleaseWithInventory(t *testing.T) {
 		},
 		Spec: helmv2.HelmReleaseSpec{},
 		Status: helmv2.HelmReleaseStatus{
-			LastReleaseRevision: 1,
+			History: helmv2.Snapshots{{
+				Name:      "first-helm-name",
+				Version:   1,
+				Namespace: ns.Name,
+			}},
 		},
 	}
 	// Create helm storage.
@@ -611,8 +625,8 @@ func TestListObject_HelmReleaseWithInventory(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, helm1, secret).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.ListObjects(ctx, &pb.ListObjectsRequest{
 		Namespace: ns.Name,
@@ -630,7 +644,7 @@ func TestListObject_HelmReleaseWithInventoryHistory(t *testing.T) {
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).NotTo(HaveOccurred())
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -644,12 +658,12 @@ func TestListObject_HelmReleaseWithInventoryHistory(t *testing.T) {
 		},
 		Spec: helmv2.HelmReleaseSpec{},
 		Status: helmv2.HelmReleaseStatus{
-			StorageNamespace:    ns.Name,
-			LastReleaseRevision: 0,
+			StorageNamespace: ns.Name,
 			History: helmv2.Snapshots{
 				{
-					Name:    "first-helm-name",
-					Version: 1,
+					Name:      "first-helm-name",
+					Version:   1,
+					Namespace: ns.Name,
 				},
 			},
 		},
@@ -673,8 +687,8 @@ func TestListObject_HelmReleaseWithInventoryHistory(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, helm1, secret).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.ListObjects(ctx, &pb.ListObjectsRequest{
 		Namespace: ns.Name,
@@ -692,7 +706,7 @@ func TestListObject_HelmReleaseCantGetSecret(t *testing.T) {
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).NotTo(HaveOccurred())
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -706,7 +720,11 @@ func TestListObject_HelmReleaseCantGetSecret(t *testing.T) {
 		},
 		Spec: helmv2.HelmReleaseSpec{},
 		Status: helmv2.HelmReleaseStatus{
-			LastReleaseRevision: 1,
+			History: helmv2.Snapshots{{
+				Name:      "first-helm-name",
+				Version:   1,
+				Namespace: ns.Name,
+			}},
 		},
 	}
 	secret := &corev1.Secret{
@@ -719,8 +737,8 @@ func TestListObject_HelmReleaseCantGetSecret(t *testing.T) {
 	}
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, helm1, secret).Build()
-	cfg := makeServerConfig(client, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, client, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.ListObjects(ctx, &pb.ListObjectsRequest{
 		Namespace: ns.Name,
@@ -748,15 +766,15 @@ func TestListObjectsSecret(t *testing.T) {
 			"key": []byte("value"),
 		},
 	}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).To(BeNil())
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, secret).Build()
 
-	cfg := makeServerConfig(fakeClient, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, fakeClient, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.ListObjects(ctx, &pb.ListObjectsRequest{
 		Kind:        "Secret",
@@ -801,15 +819,15 @@ func TestListObjectsLabels(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).To(BeNil())
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, deployment1, deployment2).Build()
 
-	cfg := makeServerConfig(fakeClient, t, "")
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, fakeClient, "")
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.ListObjects(ctx, &pb.ListObjectsRequest{
 		Kind:        "Deployment",
@@ -835,7 +853,7 @@ func TestListObjectsGitOpsRunSessions(t *testing.T) {
 		testCluster = "test-cluster"
 	)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).To(BeNil())
@@ -877,8 +895,8 @@ func TestListObjectsGitOpsRunSessions(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, session1, session2).Build()
-	cfg := makeServerConfig(fakeClient, t, testCluster)
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, fakeClient, testCluster)
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.ListObjects(ctx, &pb.ListObjectsRequest{
 		Namespace:   testNS,
@@ -902,7 +920,7 @@ func TestGetObjectSessionObjects(t *testing.T) {
 		testCluster = "test-cluster"
 	)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	scheme, err := kube.CreateScheme()
 	g.Expect(err).To(BeNil())
@@ -929,17 +947,17 @@ func TestGetObjectSessionObjects(t *testing.T) {
 		Spec: helmv2.HelmReleaseSpec{},
 	}
 
-	bucket := &sourcev1b2.Bucket{
+	bucket := &sourcev1.Bucket{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.RunDevBucketName,
 			Namespace: testNS,
 		},
-		Spec: sourcev1b2.BucketSpec{},
+		Spec: sourcev1.BucketSpec{},
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(ns, kust, helm, bucket).Build()
-	cfg := makeServerConfig(fakeClient, t, testCluster)
-	c := makeServer(cfg, t)
+	cfg := makeServerConfig(t, fakeClient, testCluster)
+	c := makeServer(ctx, t, cfg)
 
 	res, err := c.GetObject(ctx, &pb.GetObjectRequest{
 		Name:        constants.RunDevKsName,
@@ -966,7 +984,7 @@ func TestGetObjectSessionObjects(t *testing.T) {
 	res, err = c.GetObject(ctx, &pb.GetObjectRequest{
 		Name:        constants.RunDevBucketName,
 		Namespace:   testNS,
-		Kind:        sourcev1b2.BucketKind,
+		Kind:        sourcev1.BucketKind,
 		ClusterName: testCluster,
 	})
 

@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
+	"math/rand/v2"
+	"net"
 	"net/http"
 	"os"
 	"testing"
@@ -17,6 +18,15 @@ import (
 	wegohttp "github.com/weaveworks/weave-gitops/pkg/http"
 )
 
+func portInUse(port int) bool {
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
+}
+
 func TestMultiServerStartReturnsImmediatelyWithClosedContext(t *testing.T) {
 	g := NewGomegaWithT(t)
 	srv := wegohttp.MultiServer{
@@ -24,7 +34,7 @@ func TestMultiServerStartReturnsImmediatelyWithClosedContext(t *testing.T) {
 		KeyFile:  "testdata/localhost.key",
 		Logger:   log.Default(),
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	g.Expect(srv.Start(ctx, nil)).To(Succeed())
 }
@@ -32,10 +42,8 @@ func TestMultiServerStartReturnsImmediatelyWithClosedContext(t *testing.T) {
 func TestMultiServerWithoutTLSConfigFailsToStart(t *testing.T) {
 	g := NewGomegaWithT(t)
 	srv := wegohttp.MultiServer{}
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
 
-	err := srv.Start(ctx, nil)
+	err := srv.Start(t.Context(), nil)
 	g.Expect(err).To(HaveOccurred())
 	g.Expect(err.Error()).To(HavePrefix("failed to create TLS listener"))
 }
@@ -43,11 +51,12 @@ func TestMultiServerWithoutTLSConfigFailsToStart(t *testing.T) {
 func TestMultiServerServesOverBothProtocols(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	httpPort := rand.Intn(49151-1024) + 1024
-	httpsPort := rand.Intn(49151-1024) + 1024
+	httpPort := rand.N(49151-1024) + 1024  // #nosec G404
+	httpsPort := rand.N(49151-1024) + 1024 // #nosec G404
 
-	for httpPort == httpsPort {
-		httpsPort = rand.Intn(49151-1024) + 1024
+	for httpPort == httpsPort || portInUse(httpPort) || portInUse(httpsPort) {
+		httpPort = rand.N(49151-1024) + 1024  // #nosec G404
+		httpsPort = rand.N(49151-1024) + 1024 // #nosec G404
 	}
 
 	srv := wegohttp.MultiServer{
@@ -57,7 +66,7 @@ func TestMultiServerServesOverBothProtocols(t *testing.T) {
 		KeyFile:   "testdata/localhost.key",
 		Logger:    log.Default(),
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	exitChan := make(chan struct{})
 	go func(exitChan chan<- struct{}) {
@@ -93,7 +102,8 @@ func TestMultiServerServesOverBothProtocols(t *testing.T) {
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
-			RootCAs: rootCAs,
+			RootCAs:    rootCAs,
+			MinVersion: tls.VersionTLS12,
 		},
 	}
 	c := http.Client{

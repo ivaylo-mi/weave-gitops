@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
-	"gotest.tools/assert"
 )
 
 func TestReadPatterns(t *testing.T) {
@@ -47,21 +46,24 @@ func TestReadPatterns(t *testing.T) {
 			ps := ReadPatterns(reader, tt.domain)
 			matcher := NewMatcher(ps)
 			for _, m := range tt.matches {
-				assert.Equal(t, matcher.Match(strings.Split(m, "/"), false), true, "expected %s to match", m)
+				if !matcher.Match(strings.Split(m, "/"), false) {
+					t.Errorf("expected %s to match", m)
+				}
 			}
 			for _, m := range tt.mismatches {
-				assert.Equal(t, matcher.Match(strings.Split(m, "/"), false), false, "expected %s to not match", m)
+				if matcher.Match(strings.Split(m, "/"), false) {
+					t.Errorf("expected %s to not match", m)
+				}
 			}
 		})
 	}
 }
 
 func TestReadIgnoreFile(t *testing.T) {
-	f, err := os.CreateTemp("", IgnoreFilename)
+	f, err := os.CreateTemp(t.TempDir(), IgnoreFilename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(f.Name())
 	if _, err = f.Write([]byte(`# .sourceignore
 ignore-this.txt`)); err != nil {
 		t.Fatal(err)
@@ -133,10 +135,14 @@ func TestVCSPatterns(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			matcher := NewDefaultMatcher(tt.patterns, tt.domain)
 			for _, m := range tt.matches {
-				assert.Equal(t, matcher.Match(strings.Split(m, "/"), false), true, "expected %s to match", m)
+				if !matcher.Match(strings.Split(m, "/"), false) {
+					t.Errorf("expected %s to match", m)
+				}
 			}
 			for _, m := range tt.mismatches {
-				assert.Equal(t, matcher.Match(strings.Split(m, "/"), false), false, "expected %s to not match", m)
+				if matcher.Match(strings.Split(m, "/"), false) {
+					t.Errorf("expected %s to not match", m)
+				}
 			}
 		})
 	}
@@ -178,10 +184,14 @@ func TestDefaultPatterns(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			matcher := NewDefaultMatcher(tt.patterns, tt.domain)
 			for _, m := range tt.matches {
-				assert.Equal(t, matcher.Match(strings.Split(m, "/"), false), true, "expected %s to match", m)
+				if !matcher.Match(strings.Split(m, "/"), false) {
+					t.Errorf("expected %s to match", m)
+				}
 			}
 			for _, m := range tt.mismatches {
-				assert.Equal(t, matcher.Match(strings.Split(m, "/"), false), false, "expected %s to not match", m)
+				if matcher.Match(strings.Split(m, "/"), false) {
+					t.Errorf("expected %s to not match", m)
+				}
 			}
 		})
 	}

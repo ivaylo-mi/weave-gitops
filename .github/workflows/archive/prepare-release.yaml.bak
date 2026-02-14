@@ -1,0 +1,149 @@
+name: prepare-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (e.g. 'v1.2.3-rc.4')"
+        required: true
+
+permissions:
+  contents: read # for actions/checkout to fetch code
+  pull-requests: read # for mikepenz/release-changelog-builder-action to create changelog
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: weaveworks/wego-app
+
+jobs:
+  release-tasks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Unshallow
+        run: |
+          git fetch --prune --unshallow
+      - name: Setup Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version-file: go.mod
+      - name: Setup Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version-file: package.json
+      - name: Set up environment vars
+        run: |
+          echo "BRANCH=releases/${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          GITOPS_VERSION=$(echo ${{ github.event.inputs.version }} | tr -d v)
+          echo "GITOPS_VERSION=$GITOPS_VERSION" >> $GITHUB_ENV
+          git config user.name weave-gitops-bot
+          git config user.email weave-gitops-bot@weave.works
+
+      - name: Update npm package version
+        run: |
+          jq '.version = "'$GITOPS_VERSION'"' < package.json > package-new.json
+          mv package-new.json package.json
+          yarn
+          yarn test -u
+          git commit -am "Update javascript library version to $GITOPS_VERSION"
+
+      # NOTE: Chart updates are now handled automatically by release-please
+      # in the unified-release.yaml workflow. This manual step is no longer needed.
+      - name: Chart Update Notice
+        run: |
+          echo "Chart version updates are now handled automatically by release-please"
+          echo "The unified-release.yaml workflow will update:"
+          echo "   - Chart appVersion to match application version"
+          echo "   - Chart version to match application version (without 'v' prefix)"
+          echo "   - Image tag in values.yaml"
+          echo "No manual chart updates required"
+      - name: Generate updated helm reference
+        # Needs to run after chart update, before docs update
+        run: |
+         go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.9.1
+         helm-docs -c charts/gitops-server -o ../../website/docs/references/helm-reference.md
+         git commit -am "Update the helm reference" || : # This may not have changed
+      - name: Update docs version
+        env:
+          FOO: BAR
+#          ALGOLIA_API_KEY: ${{ secrets.ALGOLIA_API_KEY }}
+#          GA_KEY: ${{ secrets.GA_KEY }}
+        run: |
+          VERSION=${{ github.event.inputs.version }} make bin/gitops
+          tools/update-docs.sh ${PWD}/bin/gitops ${PWD}/website
+          git add website
+          git commit -m "Update docs for release $GITOPS_VERSION"
+        if: ${{ !contains(github.event.inputs.version, '-') }}
+
+      - name: Update README
+        run: |
+          sed -i 's#\(weave-gitops/releases/download/\)[^/]\+\(/gitops-\)#\1${{ github.event.inputs.version }}\2#' README.md
+          git commit -am "Update README to point download link to $GITOPS_VERSION"
+        if: ${{ !contains(github.event.inputs.version, '-') }}
+
+      - name: Build Changelog
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@d702b5bb7c23735c8afc130dac9c4c8b8eb669e8 # v6.0.0
+        with:
+          configuration: "${{ github.workspace }}/.github/changelog/changelog_configuration.json"
+          ignorePreReleases: true
+          toTag: ${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Pull Request
+        id: create-pull-request
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          author: weave-gitops-bot <weave-gitops-bot@weaveworks.org>
+          signoff: true
+          committer: weave-gitops-bot <weave-gitops-bot@weaveworks.org>
+          branch: ${{ env.BRANCH }}
+          base: main
+          title: "chore(release): Updates for ${{ env.GITOPS_VERSION }}"
+          body: |
+           ## Breaking changes
+           Describe any breaking changes here, or delete this block
+
+           ## Action required
+           Describe any user facing actions here, or delete this block.
+
+           ## Features and improvements
+           Describe any user facing changes here, or delete this block.
+
+           Examples of user facing changes:
+             - API changes
+             - Bug fixes
+             - Any changes in behaviour
+             - Changes requiring upgrade notices or deprecation warning
+            
+            ## Flux compatibility  
+             | Flux version | Minimum required |
+             |--------------------|------------------|
+             | `v2.4`            | `>= 2.4.0`   |
+            
+             For Flux migrations to v2.0 see [flux](https://github.com/fluxcd/flux2/releases/tag/v2.0.0) or [weave gitops](https://docs.gitops.weaveworks.org/docs/guides/fluxga-upgrade/) documentation.
+            
+           ${{ steps.github_release.outputs.changelog }}
+          token: ${{ secrets.WEAVE_GITOPS_BOT_ACCESS_TOKEN }}
+          labels: "exclude from release notes"
+      #  'Lock Release PR Merge' sets 'release' status check with pending state to avoid accidentally merging the release PR. See ../../doc/incidents/issues-3907 for full context.
+      - name: Lock Release PR
+        run: |
+          curl --fail --request POST \
+            --url https://api.github.com/repos/${{ github.repository }}/statuses/${{ steps.create-pull-request.outputs.pull-request-head-sha }} \
+            --header 'authorization: Bearer ${{ secrets.WEAVE_GITOPS_BOT_ACCESS_TOKEN }}' \
+            --header 'content-type: application/json' \
+            --data '{
+                "state":"pending",
+                "description":"execute the release to pass this check",
+                "context":"release"
+              }'
+      - name: "Comment on pull request"
+        run: |
+          curl --request POST \
+            --url https://api.github.com/repos/${{ github.repository }}/issues/${{ steps.create-pull-request.outputs.pull-request-number }}/comments \
+            --header 'authorization: Bearer ${{ secrets.WEAVE_GITOPS_BOT_ACCESS_TOKEN }}' \
+            --header 'content-type: application/json' \
+            --data '{
+                "body": "To change the release notes, edit the pull request description.\n\nAs soon as you approve the PR, the release will start, and will be automatically merged when finished"
+              }'

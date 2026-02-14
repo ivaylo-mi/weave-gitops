@@ -1,6 +1,7 @@
 *~
 bin
 /.idea
+*.iml
 
 .tool-versions
 tools/bin/*
@@ -22,7 +23,7 @@ localhost.pem
 
 # Ignore generated credentials from google-github-actions/auth
 gha-creds-*.json
-
+tasks/*.md
 # Ignore VIM's swap files
 *.swp
 
@@ -32,3 +33,67 @@ gha-creds-*.json
 # macOS
 .DS_Store
 gitops-server.dockerfile
+
+# =============================================================================
+# Python (venv, bytecode, tests, tooling)
+# =============================================================================
+# Virtual environments
+.venv/
+venv/
+env/
+.env/
+tooling/.venv/
+tmp/
+# Bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.Python
+
+# Distribution / packaging
+*.egg
+*.egg-info
+*.egg-info/
+**/*.egg-info
+**/*.egg-info/
+.eggs/
+**/.eggs/
+*.manifest
+
+# Coverage and pytest
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.pytest_cache/
+
+# Type checkers and linters
+.mypy_cache/
+.mypy_cache
+.ruff_cache/
+
+# Tox / nox
+.tox/
+.nox/
+
+# Logs and local env (secrets)
+**/*.log
+**/*.logs
+.env
+.env.local
+.env.*.local
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Release workflow artefact
+release-body.md
+
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+playwright/test-results

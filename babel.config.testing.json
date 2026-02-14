@@ -1,0 +1,27 @@
+{
+    "presets": [
+        [
+            "@babel/preset-env",
+            {
+                "targets": {
+                    "node": "current"
+                }
+            }
+        ]
+    ],
+    "plugins": [
+        [
+            "babel-plugin-styled-components",
+            {
+                "displayName": false,
+                "fileName": false
+            }
+        ],
+        [
+            "@emotion/babel-plugin",
+            {
+                "autoLabel": "never"
+            }
+        ]
+    ]
+}

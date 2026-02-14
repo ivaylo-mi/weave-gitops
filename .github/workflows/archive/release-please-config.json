@@ -1,0 +1,41 @@
+{
+  "always-update": true,
+  "packages": {
+    ".": {
+      "bootstrap-sha": "76f25bbb1d20aa41a1f78920344f579af4f88e2d",
+      "bump-minor-pre-major": true,
+      "exclude-paths": [
+        "doc",
+        "website"
+      ],
+      "extra-files": [
+        {
+          "type": "yaml",
+          "path": "charts/gitops-server/Chart.yaml",
+          "jsonpath": "$.appVersion"
+        },
+        {
+          "type": "yaml",
+          "path": "charts/gitops-server/Chart.yaml",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "yaml",
+          "path": "charts/gitops-server/values.yaml",
+          "jsonpath": "$.image.tag"
+        },
+        "README.md"
+      ],
+      "include-component-in-tag": false,
+      "prerelease": true,
+      "prerelease-type": "rc",
+      "release-as": "0.39.0-rc.3",
+      "release-type": "node"
+    }
+  },
+  "plugins": [
+    "sentence-case"
+  ],
+  "separate-pull-requests": false,
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+}

@@ -1,0 +1,17 @@
+{
+    "plugins": [
+        [
+            "babel-plugin-styled-components",
+            {
+                "displayName": false,
+                "fileName": false
+            }
+        ],
+        [
+            "@emotion/babel-plugin",
+            {
+                "autoLabel": "never"
+            }
+        ]
+    ]
+}

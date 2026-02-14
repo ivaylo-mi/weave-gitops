@@ -1,53 +1,115 @@
 version: 2
 updates:
-  # Maintain dependencies for frontend
-  - package-ecosystem: "npm"
+  - package-ecosystem: npm
     directory: "/"
     schedule:
-      interval: "daily"
-    reviewers:
-      - "weaveworks/timber-wolf"
-      - "weaveworks/pesto"
-      - "weaveworks/wild-watermelon"
-      - "weaveworks/tangerine"
-    # Only do security updates not version updates.
-    open-pull-requests-limit: 0
-
-  # Maintain dependencies for backend
-  - package-ecosystem: "gomod"
+      interval: weekly
+      day: thursday
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: fix
+      prefix-development: build
+      include: scope
+    groups:
+      babel:
+        patterns:
+          - "@babel/core"
+          - "@babel/preset-env"
+          - "@types/babel__preset-env"
+      emotion:
+        patterns:
+          - "@emotion/*"
+      eslint:
+        patterns:
+          - eslint
+          - "@eslint/*"
+          - "@typescript-eslint/*"
+      jest:
+        patterns:
+          - babel-jest
+          - jest
+          - jest-environment-jsdom
+          - jest-worker
+      mui:
+        patterns:
+          - "@mui/*"
+      parcel:
+        patterns:
+          - parcel
+          - "@parcel/*"
+      react:
+        patterns:
+          - react
+          - "react-*"
+          - "@types/react"
+          - "@types/react-*"
+        exclude-patterns:
+          - react-lottie-player
+          - react-markdown
+          - react-router
+          - react-syntax-highlighter
+          - react-toastify
+  - package-ecosystem: gomod
     directory: "/"
     schedule:
-      interval: "daily"
-    reviewers:
-      - "weaveworks/timber-wolf"
-      - "weaveworks/pesto"
-      - "weaveworks/wild-watermelon"
-      - "weaveworks/tangerine"
-    # Only do security updates not version updates.
-    open-pull-requests-limit: 0
-
-  # Maintain dependencies for website
-  - package-ecosystem: "npm"
+      interval: weekly
+      day: tuesday
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: fix
+      include: scope
+    groups:
+      flux:
+        patterns:
+          - "github.com/fluxcd/*"
+      golang-grpc:
+        patterns:
+          - google.golang.org/grpc
+          - google.golang.org/protobuf
+      golang-x:
+        patterns:
+          - "golang.org/x/*"
+      kustomize:
+        patterns:
+          - "sigs.k8s.io/kustomize/*"
+      k8s:
+        patterns:
+          - "k8s.io/*"
+  - package-ecosystem: npm
     directory: "/website"
     schedule:
-      interval: "daily"
-    reviewers:
-      - "weaveworks/timber-wolf"
-      - "weaveworks/pesto"
-      - "weaveworks/wild-watermelon"
-      - "weaveworks/tangerine"
-    # Only do security updates not version updates.
-    open-pull-requests-limit: 0
-
-  # maintain dependencies for github actions
-  - package-ecosystem: "github-actions"
+      interval: weekly
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      all-website-npm:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: "weekly"
-    reviewers:
-      - "weaveworks/timber-wolf"
-      - "weaveworks/pesto"
-      - "weaveworks/wild-watermelon"
-      - "weaveworks/tangerine"
-    # Only do security updates not version updates.
-    open-pull-requests-limit: 0
+      interval: weekly
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      all-github-actions:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: friday
+    commit-message:
+      prefix: chore
+      include: scope
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      all-pip:
+        patterns: ["*"]
