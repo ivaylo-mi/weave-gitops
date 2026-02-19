@@ -8,7 +8,7 @@ before:
 checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
 release:
-  mode: keep-existing
+  disable: true
 archives:
   - formats: tar.gz
     name_template: >-
@@ -69,9 +69,9 @@ builds:
       - darwin
     goarch:
       - arm64
-signs:
-  - id: cosign-keyless
-    cmd: cosign
-    certificate: "${artifact}.crt"
-    args: ["sign-blob", "--output-signature", "${signature}", "--output-certificate", "${certificate}", "${artifact}", "--yes"]
-    artifacts: all
+#signs:
+#  - id: cosign-keyless
+#    cmd: cosign
+#    certificate: "${artifact}.crt"
+#    args: ["sign-blob", "--output-signature", "${signature}", "--output-certificate", "${certificate}", "${artifact}", "--yes"]
+#    artifacts: all

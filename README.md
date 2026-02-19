@@ -1,5 +1,10 @@
 # Weave GitOps
 
+> I need new version of Weave GitOps which supports flux >v2.7.0. 
+> Helm chart is not updated, no new features, only dockerfile based on the changes in the main branch since [latest pre-release](https://github.com/weaveworks/weave-gitops/releases/tag/v0.39.0-rc.2).
+> 
+> Dockerfile can be found [here](https://github.com/gkalian/weave-gitops/pkgs/container/wego-app). Use it and keep everything the same
+
 ![Test status](https://github.com/weaveworks/weave-gitops/actions/workflows/pr.yaml/badge.svg)
 [![LICENSE](https://img.shields.io/github/license/weaveworks/weave-gitops)](https://github.com/weaveworks/weave-gitops/blob/master/LICENSE)
 [![Contributors](https://img.shields.io/github/contributors/weaveworks/weave-gitops)](https://github.com/weaveworks/weave-gitops/graphs/contributors)
@@ -68,7 +73,7 @@ Weave GitOps Open Source provides:
 Mac / Linux
 
 ```console
-curl --silent --location "https://github.com/weaveworks/weave-gitops/releases/download/v0.39.0-rc.2/gitops-$(uname)-$(uname -m).tar.gz" | tar xz -C /tmp
+curl --silent --location "https://github.com/weaveworks/weave-gitops/releases/download/v0.39.0-rc.3/gitops-$(uname)-$(uname -m).tar.gz" | tar xz -C /tmp
 sudo mv /tmp/gitops /usr/local/bin
 gitops version
 ```
