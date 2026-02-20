@@ -108,8 +108,8 @@ jobs:
   ui-lint:
     name: UI lint
     needs: [pr-title-lint]
-    runs-on: ubuntu-latest
     if: ${{ !failure() }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -123,8 +123,8 @@ jobs:
   ui-test:
     name: UI test
     needs: [pr-title-lint]
-    runs-on: ubuntu-latest
     if: ${{ !failure() }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -137,8 +137,8 @@ jobs:
   proto:
     name: Proto (generate + git diff)
     needs: [pr-title-lint]
-    runs-on: ubuntu-latest
     if: ${{ !failure() }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -154,6 +154,7 @@ jobs:
   go-fmt:
     name: Go fmt
     needs: [proto, ui-lint, ui-test]
+    if: ${{ !failure() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -165,6 +166,7 @@ jobs:
   go-lint:
     name: Go lint
     needs: [proto, ui-lint, ui-test]
+    if: ${{ !failure() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -176,6 +178,7 @@ jobs:
   go-unit-tests:
     name: Go unit-tests
     needs: [proto, ui-lint, ui-test]
+    if: ${{ !failure() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -196,6 +199,7 @@ jobs:
   build:
     name: Build (gitops, gitops-server)
     needs: [go-fmt, go-lint, go-unit-tests]
+    if: ${{ !failure() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -209,7 +213,7 @@ jobs:
   build-push-gitops-server:
     name: Build and push gitops-server image
     needs: [build, vars]
-    if: needs.vars.outputs.run_release_jobs == 'true'
+    if: ${{ !failure() && needs.vars.outputs.run_release_jobs == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -272,7 +276,7 @@ jobs:
   build-and-push-chart:
     name: Build and push Helm chart
     needs: [build, vars]
-    if: needs.vars.outputs.run_release_jobs == 'true'
+    if: ${{ !failure() && needs.vars.outputs.run_release_jobs == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -317,7 +321,7 @@ jobs:
   goreleaser:
     name: Goreleaser (gitops CLI)
     needs: [build, vars]
-    if: needs.vars.outputs.run_release_jobs == 'true'
+    if: ${{ !failure() && needs.vars.outputs.run_release_jobs == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
