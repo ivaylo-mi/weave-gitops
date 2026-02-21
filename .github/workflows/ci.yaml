@@ -14,11 +14,6 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
     inputs:
       run_release_jobs:
@@ -261,7 +256,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v4
+        uses: sigstore/cosign-installer@v4.0.0
 
       - name: Keyless signing of image
         run: |
@@ -306,7 +301,7 @@ jobs:
           echo "digest=$CHART_DIGEST" >> $GITHUB_OUTPUT
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v4
+        uses: sigstore/cosign-installer@v4.0.0
 
       - name: Keyless signing of chart
         run: |
@@ -348,7 +343,7 @@ jobs:
         run: cat .goreleaser.brew.yml >> .goreleaser.yml
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v4
+        uses: sigstore/cosign-installer@v4.0.0
 
       - uses: goreleaser/goreleaser-action@v6
         with:
