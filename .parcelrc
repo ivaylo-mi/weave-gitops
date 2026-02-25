@@ -4,5 +4,6 @@
     "*.{ts,tsx}": [
       "@parcel/transformer-typescript-tsc"
     ]
-  }
+  },
+  "optimizers": { "*.html": [] }
 }
