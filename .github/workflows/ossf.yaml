@@ -1,11 +1,5 @@
 name: ossf
 on:
-  branch_protection_rule:
-  push:
-    branches: [ main ]
-  schedule:
-    # Weekly on Saturdays.
-    - cron:  '30 1 * * 6'
   workflow_dispatch:
 
 permissions: read-all
