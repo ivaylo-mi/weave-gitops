@@ -300,6 +300,12 @@ jobs:
           [ -n "$CHART_PUSHED" ] || { echo "Could not parse chart from helm push"; cat /tmp/push.log; exit 1; }
           echo "chart_pushed=$CHART_PUSHED" >> $GITHUB_OUTPUT
 
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install cosign
         uses: sigstore/cosign-installer@v4.0.0
 
