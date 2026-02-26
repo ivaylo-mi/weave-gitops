@@ -311,7 +311,7 @@ jobs:
 
       - name: Keyless signing of chart
         run: |
-          cosign sign --yes ghcr.io/${{ github.repository_owner }}/charts//weave-gitops@${{ steps.push-chart.outputs.digest }}
+          cosign sign --yes ghcr.io/${{ github.repository_owner }}/charts/weave-gitops@${{ steps.push-chart.outputs.digest }}
 
       - name: Verify the chart signing
         run: |
