@@ -59,7 +59,7 @@ unit-tests: ## Run unit tests
 	# the following command should pick up the correct version from go.mod.
 	@go install github.com/onsi/ginkgo/v2/ginkgo
 	# This tool doesn't have releases - it also is only a shim
-	@go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	@go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20260303054855-df93a6a7a9e0
 	KUBEBUILDER_ASSETS=$$(setup-envtest use -p path 1.32.0) CGO_ENABLED=1 ginkgo $(TEST_V) -race -tags unittest $(TEST_TO_RUN)
 
 local-kind-cluster-with-registry:
