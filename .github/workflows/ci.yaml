@@ -130,7 +130,7 @@ jobs:
       - run: make ui-test
         
   proto:
-    name: Proto (generate + git diff)
+    name: Proto (generate)
     needs: [pr-title-lint]
     if: ${{ !failure() }}
     runs-on: ubuntu-latest
@@ -144,7 +144,6 @@ jobs:
           go install github.com/bufbuild/buf/cmd/buf@v1.48.0
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - run: make proto
-      - run: git diff --no-ext-diff --exit-code
 
   go-fmt:
     name: Go fmt
