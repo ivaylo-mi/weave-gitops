@@ -19,7 +19,7 @@
   "paths": {
     "/v1/child_objects": {
       "post": {
-        "summary": "GetChildObjects returns the children of a given object,\nspecified by a GroupVersionKind.\nNot all Kubernets objects have children. For example, a Deployment\nhas a child ReplicaSet, but a Service has no child objects.",
+        "summary": "GetChildObjects returns the children of a given object,\r\nspecified by a GroupVersionKind.\r\nNot all Kubernets objects have children. For example, a Deployment\r\nhas a child ReplicaSet, but a Service has no child objects.",
         "operationId": "Core_GetChildObjects",
         "responses": {
           "200": {
@@ -52,7 +52,7 @@
     },
     "/v1/crd/is_available": {
       "get": {
-        "summary": "IsCRDAvailable returns with a hashmap where the keys are the names of\nthe clusters, and the value is a boolean indicating whether given CRD is\ninstalled or not on that cluster.",
+        "summary": "IsCRDAvailable returns with a hashmap where the keys are the names of\r\nthe clusters, and the value is a boolean indicating whether given CRD is\r\ninstalled or not on that cluster.",
         "operationId": "Core_IsCRDAvailable",
         "responses": {
           "200": {
@@ -571,7 +571,7 @@
     },
     "/v1/reconciled_objects": {
       "post": {
-        "summary": "GetReconciledObjects returns a list of objects that were created\nas a result of reconciling a Flux automation.\nThis list is derived by looking at the Kustomization or HelmRelease\nspecified in the request body.",
+        "summary": "GetReconciledObjects returns a list of objects that were created\r\nas a result of reconciling a Flux automation.\r\nThis list is derived by looking at the Kustomization or HelmRelease\r\nspecified in the request body.",
         "operationId": "Core_GetReconciledObjects",
         "responses": {
           "200": {
@@ -604,7 +604,7 @@
     },
     "/v1/runtime_crds": {
       "get": {
-        "summary": "ListRuntimeCrds lists Weave GitOps runtime components CRDs.\nWeave GitOps runtime is composed of Flux runtime but also other components\nin the ecosystem like TF-controller or Policy Agent.",
+        "summary": "ListRuntimeCrds lists Weave GitOps runtime components CRDs.\r\nWeave GitOps runtime is composed of Flux runtime but also other components\r\nin the ecosystem like TF-controller or Policy Agent.",
         "operationId": "Core_ListRuntimeCrds",
         "responses": {
           "200": {
@@ -635,7 +635,7 @@
     },
     "/v1/runtime_objects": {
       "get": {
-        "summary": "ListRuntimeObjects lists Weave GitOps runtime components.\nWeave GitOps runtime is composed of Flux runtime but also other components\nin the ecosystem like TF-controller or Policy Agent.",
+        "summary": "ListRuntimeObjects lists Weave GitOps runtime components.\r\nWeave GitOps runtime is composed of Flux runtime but also other components\r\nin the ecosystem like TF-controller or Policy Agent.",
         "operationId": "Core_ListRuntimeObjects",
         "responses": {
           "200": {
@@ -1629,7 +1629,7 @@
         },
         "value": {
           "$ref": "#/definitions/protobufAny",
-          "title": "value is a generic value that can be a string, int, bool and array of\nstrings"
+          "title": "value is a generic value that can be a string, int, bool and array of\r\nstrings"
         },
         "required": {
           "type": "boolean"
