@@ -23,7 +23,7 @@ func TestWithRoutePrefix(t *testing.T) {
 		// redirect from root to route prefix for nice UX in the browser
 		{path: "/", expected: http.StatusFound, content: "<a href=\"/test/\">Found</a>.\n\n"},
 		// Redirects to trailing slash, nice for the browser
-		{path: "/test", expected: http.StatusTemporaryRedirect, content: "<a href=\"/test/\">Temporary Redirect</a>.\n\n"},
+		{path: "/test", expected: http.StatusMovedPermanently, content: "<a href=\"/test/\">Moved Permanently</a>.\n\n"},
 		// We didn't add a root handler
 		{path: "/test/", expected: http.StatusNotFound},
 		// access the mounted handler
