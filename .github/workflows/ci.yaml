@@ -281,7 +281,7 @@ jobs:
         with:
           ref: ${{ github.ref }}
 
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
         with:
           version: "v3.17.0"
 
@@ -299,7 +299,7 @@ jobs:
           [ -n "$CHART_DIGEST" ] || { echo "Could not parse digest from helm push"; cat /tmp/push.log; exit 1; }
           echo "digest=$CHART_DIGEST" >> $GITHUB_OUTPUT
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
