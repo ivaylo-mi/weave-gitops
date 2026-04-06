@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -11,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tomwright/dasel/v2"
+	"github.com/tomwright/dasel/v3"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/api/validation"
 )
@@ -130,20 +131,28 @@ func FindCoreConfig(dir string) WalkResult {
 				docs = append(docs, entry)
 			}
 
-			rootNode := dasel.ValueOf(docs)
 			var foundHelmRelease, foundHelmRepository bool
 
-			val, err := dasel.Select(rootNode, fmt.Sprintf("all().filter(equal(kind,HelmRelease),equal(metadata.name,%s)).count()", coreManifestName))
+			query := fmt.Sprintf("$this.filter(kind == 'HelmRelease' && metadata.name == '%s').keys()", coreManifestName)
+			selectResult, _, err := dasel.Select(context.Background(), docs, query)
 			if err != nil {
+				fmt.Println(err)
 				return nil
 			}
-			foundHelmRelease = val.Interfaces()[0] != 0
+			// You should validate the type assertion in real code.
+			selectResults := selectResult.([]any)
+			selectResultsInner := selectResults[0].([]any)
+			foundHelmRelease = len(selectResultsInner) != 0
 
-			val, err = dasel.Select(rootNode, fmt.Sprintf("all().filter(equal(kind,HelmRepository),equal(metadata.name,%s)).count()", coreManifestName))
+			query = fmt.Sprintf("$this.filter(kind == 'HelmRepository' && metadata.name == '%s').keys()", coreManifestName)
+			selectResult, _, err = dasel.Select(context.Background(), docs, query)
 			if err != nil {
+				fmt.Println(err)
 				return nil
 			}
-			foundHelmRepository = val.Interfaces()[0] != 0
+			selectResults = selectResult.([]any)
+			selectResultsInner = selectResults[0].([]any)
+			foundHelmRepository = len(selectResultsInner) != 0
 
 			if foundHelmRelease != foundHelmRepository {
 				return WalkResult{Status: Partial, Path: path}
@@ -153,12 +162,7 @@ func FindCoreConfig(dir string) WalkResult {
 			}
 
 			// retrieve the number of top-level entries from the file
-			val, err = dasel.Select(rootNode, "all().count()")
-			if err != nil {
-				return nil
-			}
-
-			if val.Interfaces()[0] != coreManifestCount {
+			if len(docs) != coreManifestCount {
 				return WalkResult{Status: Embedded, Path: path}
 			}
 
