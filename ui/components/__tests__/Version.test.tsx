@@ -6,7 +6,7 @@ import Version from "../Version";
 
 const productName = "product name";
 const versionText = "version text";
-const versionHref = "https://github.com/weaveworks/weave-gitops";
+const versionHref = "https://github.com/ivaylo-mi/weave-gitops";
 
 describe("Version", () => {
   describe("snapshots", () => {
