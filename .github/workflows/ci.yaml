@@ -252,7 +252,7 @@ jobs:
             ghcr.io/${{ github.repository }}/gitops-server:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
       - name: Install cosign
         uses: sigstore/cosign-installer@v4.0.0
