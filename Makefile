@@ -136,7 +136,7 @@ proto: ## Generate protobuf files
 	@go install github.com/grpc-ecosystem/protoc-gen-grpc-gateway-ts
 	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
 	@go install github.com/bufbuild/buf/cmd/buf@v1.48.0
-	buf generate
+	buf generate --timeout 10m
 #	This job is complaining about a missing plugin and error-ing out
 #	oapi-codegen -config oapi-codegen.config.yaml api/applications/applications.swagger.json
 
