@@ -84,17 +84,6 @@ jobs:
             exit 1
           fi
 
-      - name: Generate release notes (OpenAI or Anthropic per provider)
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          tooling/.venv/bin/weavetooling release generate-notes \
-            --version ${{ steps.bump.outputs.version }} \
-            --output release-body.md \
-            --template .github/release-notes-template.md \
-            --provider ${{ env.NOTES_PROVIDER }}
-
       - name: Commit, tag and push
         uses: EndBug/add-and-commit@v10
         with:
